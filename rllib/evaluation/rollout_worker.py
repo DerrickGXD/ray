@@ -46,6 +46,9 @@ from ray.util.debug import log_once, disable_log_once_globally, \
     enable_periodic_logging
 from ray.util.iter import ParallelIteratorWorker
 
+
+from ray.util.sgd.utils import TimerStat
+
 if TYPE_CHECKING:
     from ray.rllib.evaluation.observation_function import ObservationFunction
     from ray.rllib.agents.callbacks import DefaultCallbacks  # noqa
@@ -966,6 +969,7 @@ class RolloutWorker(ParallelIteratorWorker):
             out = self.sampler.get_metrics()
         else:
             out = []
+
         # Get metrics from our reward-estimators (if any).
         for m in self.reward_estimators:
             out.extend(m.get_metrics())

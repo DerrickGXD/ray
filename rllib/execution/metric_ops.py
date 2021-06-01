@@ -7,6 +7,12 @@ from ray.rllib.evaluation.metrics import collect_episodes, summarize_episodes
 from ray.rllib.execution.common import AGENT_STEPS_SAMPLED_COUNTER, \
     STEPS_SAMPLED_COUNTER, _get_shared_metrics
 from ray.rllib.evaluation.worker_set import WorkerSet
+from malib.utils.logger import Log, get_logger
+from malib.utils.convert import get_head_node_ip
+import os
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+LOG_DIR = os.path.join(BASE_DIR, "logs")
 
 
 def StandardMetricsReporting(
@@ -70,6 +76,18 @@ class CollectMetrics:
         self.min_history = min_history
         self.timeout_seconds = timeout_seconds
         self.selected_workers = selected_workers
+        self.logger = get_logger(
+            log_level=10,
+            log_dir=LOG_DIR,
+            name=selected_workers,
+            remote=True,
+            mongo=True,
+            expr_group="rllib-impala",
+            expr_name="CartPole-v0",
+            host = "127.0.0.1",
+            port=27017
+        )
+
 
     def __call__(self, _: Any) -> Dict:
         # Collect worker metrics.
@@ -101,6 +119,14 @@ class CollectMetrics:
             if timer.has_units_processed():
                 timers["{}_throughput".format(k)] = round(
                     timer.mean_throughput, 3)
+
+                throughput = timer.mean_throughput
+
+                with Log.timer(
+                    log=True, logger=self.logger, info="THROUGHPUT"
+                ) as logging_metrics:
+                    logging_metrics.append(throughput)
+
         res.update({
             "num_healthy_workers": len(self.workers.remote_workers()),
             "timesteps_total": metrics.counters[STEPS_SAMPLED_COUNTER],
